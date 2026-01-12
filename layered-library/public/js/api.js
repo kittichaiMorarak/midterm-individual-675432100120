@@ -4,17 +4,34 @@ class LibraryAPI {
         this.baseURL = baseURL;
     }
     
+    // Get all books
     async getAllBooks(status = null) {
-        let url = `${this.baseURL}/books`;
-        if (status) {
-            url += `?status=${status}`;
+        try {
+            const base = `${this.baseURL}/books`;
+            const url = status ? `${base}?status=${status}` : base;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Failed to fetch books');
+
+            const data = await response.json();
+
+            // ถ้า backend ส่ง { books, statistics } มาแล้ว ใช้เลย
+            if (data.books && data.statistics) {
+                return data;
+            }
+
+            // ถ้า backend ส่ง array มา ต้องคำนวณเอง
+            const books = Array.isArray(data) ? data : [];
+            const statistics = {
+                total: books.length,
+                available: books.filter(b => b.status === 'available').length,
+                borrowed: books.filter(b => b.status === 'borrowed').length
+            };
+
+            return { books, statistics };
+        } catch (error) {
+            console.error('Error fetching books:', error);
+            throw error;
         }
-        
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error('Failed to fetch books');
-        }
-        return await response.json();
     }
     
     async getBookById(id) {

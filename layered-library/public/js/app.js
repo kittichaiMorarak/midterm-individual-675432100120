@@ -3,14 +3,41 @@ let currentFilter = 'all';
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('App initialized');
     setupEventListeners();
     loadBooks();
 });
 
 // Setup event listeners
 function setupEventListeners() {
-    document.getElementById('add-btn').addEventListener('click', showAddModal);
+    const addBtn = document.getElementById('add-btn');
+    const closeBtn = document.querySelector('.close');
+    const cancelBtn = document.getElementById('cancel-btn');
+    const bookForm = document.getElementById('book-form');
     
+    console.log('Setting up event listeners...');
+    console.log('Add button:', addBtn);
+    
+    if (addBtn) {
+        addBtn.addEventListener('click', () => {
+            console.log('Add button clicked!');
+            showAddModal();
+        });
+    }
+    
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeModal);
+    }
+    
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', closeModal);
+    }
+    
+    if (bookForm) {
+        bookForm.addEventListener('submit', handleSubmit);
+    }
+    
+    // Filter buttons
     document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const filter = e.target.dataset.filter;
@@ -18,9 +45,13 @@ function setupEventListeners() {
         });
     });
     
-    document.querySelector('.close').addEventListener('click', closeModal);
-    document.getElementById('cancel-btn').addEventListener('click', closeModal);
-    document.getElementById('book-form').addEventListener('submit', handleSubmit);
+    // Close modal when clicking outside
+    window.addEventListener('click', (e) => {
+        const modal = document.getElementById('book-modal');
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
 }
 
 // Load books
@@ -36,7 +67,11 @@ async function loadBooks(status = null) {
         hideLoading();
     } catch (error) {
         console.error('Error:', error);
-        alert('Failed to load books: ' + error.message);
+        document.getElementById('book-list').innerHTML = `
+            <div class="no-books">
+                ❌ Failed to load books: ${error.message}
+            </div>
+        `;
         hideLoading();
     }
 }
@@ -45,8 +80,8 @@ async function loadBooks(status = null) {
 function displayBooks(books) {
     const container = document.getElementById('book-list');
     
-    if (books.length === 0) {
-        container.innerHTML = '<div class="no-books">📚 No books found</div>';
+    if (!books || books.length === 0) {
+        container.innerHTML = '<div class="no-books">📚 No books found. Click "Add New Book" to get started!</div>';
         return;
     }
     
@@ -59,17 +94,17 @@ function createBookCard(book) {
         <div class="book-card">
             <h3>${escapeHtml(book.title)}</h3>
             <p class="author">👤 ${escapeHtml(book.author)}</p>
-            <p class="isbn">🔖 ISBN: ${escapeHtml(book.isbn)}</p>
+            <p class="isbn">📖 ISBN: ${escapeHtml(book.isbn)}</p>
             <span class="status-badge status-${book.status}">
-                ${book.status === 'available' ? '✅' : '📖'} ${book.status.toUpperCase()}
+                ${book.status === 'available' ? '✅ Available' : '📤 Borrowed'}
             </span>
             <div class="actions">
+                <button class="btn btn-warning" onclick="editBook(${book.id})">✏️ Edit</button>
+                <button class="btn btn-danger" onclick="deleteBook(${book.id})">🗑️ Delete</button>
                 ${book.status === 'available' 
-                    ? `<button class="btn btn-success" onclick="borrowBook(${book.id})">Borrow</button>`
-                    : `<button class="btn btn-warning" onclick="returnBook(${book.id})">Return</button>`
+                    ? `<button class="btn btn-success" onclick="borrowBook(${book.id})">📤 Borrow</button>`
+                    : `<button class="btn btn-primary" onclick="returnBook(${book.id})">📥 Return</button>`
                 }
-                <button class="btn btn-secondary" onclick="editBook(${book.id})">Edit</button>
-                <button class="btn btn-danger" onclick="deleteBook(${book.id})">Delete</button>
             </div>
         </div>
     `;
@@ -98,25 +133,42 @@ function filterBooks(status) {
 
 // Show/hide loading
 function showLoading() {
-    document.getElementById('loading').style.display = 'block';
-    document.getElementById('book-list').style.display = 'none';
+    const loading = document.getElementById('loading');
+    const bookList = document.getElementById('book-list');
+    if (loading) loading.style.display = 'block';
+    if (bookList) bookList.style.display = 'none';
 }
 
 function hideLoading() {
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('book-list').style.display = 'grid';
+    const loading = document.getElementById('loading');
+    const bookList = document.getElementById('book-list');
+    if (loading) loading.style.display = 'none';
+    if (bookList) bookList.style.display = 'grid';
 }
 
 // Modal functions
 function showAddModal() {
-    document.getElementById('modal-title').textContent = 'Add New Book';
-    document.getElementById('book-form').reset();
-    document.getElementById('book-id').value = '';
-    document.getElementById('book-modal').style.display = 'flex';
+    console.log('Opening modal...');
+    const modal = document.getElementById('book-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const bookForm = document.getElementById('book-form');
+    const bookId = document.getElementById('book-id');
+    
+    if (modalTitle) modalTitle.textContent = 'Add New Book';
+    if (bookForm) bookForm.reset();
+    if (bookId) bookId.value = '';
+    if (modal) {
+        modal.style.display = 'flex';
+        console.log('Modal opened!');
+    }
 }
 
 function closeModal() {
-    document.getElementById('book-modal').style.display = 'none';
+    console.log('Closing modal...');
+    const modal = document.getElementById('book-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
 }
 
 // Form submit
@@ -133,16 +185,16 @@ async function handleSubmit(event) {
     try {
         if (id) {
             await api.updateBook(id, bookData);
-            alert('Book updated successfully!');
+            alert('✅ Book updated successfully!');
         } else {
             await api.createBook(bookData);
-            alert('Book added successfully!');
+            alert('✅ Book added successfully!');
         }
         
         closeModal();
         loadBooks(currentFilter === 'all' ? null : currentFilter);
     } catch (error) {
-        alert('Error: ' + error.message);
+        alert('❌ Error: ' + error.message);
     }
 }
 
@@ -159,7 +211,7 @@ async function editBook(id) {
         
         document.getElementById('book-modal').style.display = 'flex';
     } catch (error) {
-        alert('Error: ' + error.message);
+        alert('❌ Error: ' + error.message);
     }
 }
 
@@ -169,10 +221,10 @@ async function borrowBook(id) {
     
     try {
         await api.borrowBook(id);
-        alert('Book borrowed successfully!');
+        alert('✅ Book borrowed successfully!');
         loadBooks(currentFilter === 'all' ? null : currentFilter);
     } catch (error) {
-        alert('Error: ' + error.message);
+        alert('❌ Error: ' + error.message);
     }
 }
 
@@ -182,27 +234,27 @@ async function returnBook(id) {
     
     try {
         await api.returnBook(id);
-        alert('Book returned successfully!');
+        alert('✅ Book returned successfully!');
         loadBooks(currentFilter === 'all' ? null : currentFilter);
     } catch (error) {
-        alert('Error: ' + error.message);
+        alert('❌ Error: ' + error.message);
     }
 }
 
 // Delete book
 async function deleteBook(id) {
-    if (!confirm('Are you sure?')) return;
+    if (!confirm('Are you sure you want to delete this book?')) return;
     
     try {
         await api.deleteBook(id);
-        alert('Book deleted successfully!');
+        alert('✅ Book deleted successfully!');
         loadBooks(currentFilter === 'all' ? null : currentFilter);
     } catch (error) {
-        alert('Error: ' + error.message);
+        alert('❌ Error: ' + error.message);
     }
 }
 
-// Escape HTML
+// Escape HTML to prevent XSS
 function escapeHtml(text) {
     const map = {
         '&': '&amp;',
@@ -211,5 +263,5 @@ function escapeHtml(text) {
         '"': '&quot;',
         "'": '&#039;'
     };
-    return text.replace(/[&<>"']/g, m => map[m]);
+    return String(text).replace(/[&<>"']/g, m => map[m]);
 }
