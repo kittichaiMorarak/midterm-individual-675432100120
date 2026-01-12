@@ -1,18 +1,27 @@
-const userService = require('../../business/services/user.service');
+const service = require('../../business/services/book.service');
 
-exports.createUser = async (req, res, next) => {
+exports.getBooks = async (req, res, next) => {
   try {
-    const user = await userService.create(req.body);
-    res.status(201).json(user);
+    const result = await service.getAll(req.query.status);
+    res.json(result);
   } catch (err) {
     next(err);
   }
 };
 
-exports.getUsers = async (req, res, next) => {
+exports.createBook = async (req, res, next) => {
   try {
-    const users = await userService.findAll();
-    res.json(users);
+    const book = await service.create(req.body);
+    res.status(201).json(book);
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.borrowBook = async (req, res, next) => {
+  try {
+    const book = await service.borrow(Number(req.params.id));
+    res.json(book);
   } catch (err) {
     next(err);
   }

@@ -1,9 +1,10 @@
 const express = require('express');
-const controller = require('../controllers/user.controller');
+const controller = require('../controllers/book.controller');
 
 const router = express.Router();
 
-router.post('/', controller.createUser);
-router.get('/', controller.getUsers);
+router.get('/', controller.getBooks);
+router.post('/', controller.createBook);
+router.patch('/:id/borrow', controller.borrowBook);
 
 module.exports = router;
